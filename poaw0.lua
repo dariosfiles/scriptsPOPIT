@@ -311,56 +311,54 @@ local Button = Main:CreateButton({
    end,
 })
 
-local Desync = Window:CreateTab("BetterDesync", "wifi")
+local Desync = Window:CreateTab("Raknet", "wifi")
 
 local Desyncsection = Desync:CreateSection("RAKNET DESYNC")
 
 local Paragraph = Desync:CreateParagraph({Title = "Desync", Content = "If you do not have RakNet on, this will not work"})
 
 local hooked = false
-local skipPacket = false -- Toggles between true/false to skip every other packet
+local packetCount = 0
 
--- Note: 'raknet' must be globally available in your executor environment for this to function
 local function rakhook(packet)
     if packet.PacketId == 0x1B then
-        -- Only process the packet if skipPacket is false
-        if skipPacket then
-            skipPacket = false
-            return -- Skip this packet
+        packetCount = packetCount + 1
+        
+        -- Increasing this number (e.g., 20 or 30) holds your position longer
+        -- making you appear frozen or invisible to others for a longer duration.
+        if packetCount < 20 then
+            packet:SetData(packet.AsBuffer) -- This holds the packet
+            return -- Stop the packet from sending
         else
-            skipPacket = true
-            -- Process the packet
-            local buf = packet.AsBuffer
-            buffer.writeu32(buf, 1, 0xFFFFFFFF)
-            packet:SetData(buf)
+            packetCount = 0 -- Reset and let the "snap" happen
         end
     end
 end
 
 local Toggle = Desync:CreateToggle({
-    Name = "BetterDesync",
+    Name = "Desync",
     CurrentValue = false,
     Flag = "DesyncToggle",
     Callback = function(Value)
-        -- Check if the environment supports raknet before proceeding
-        if typeof(raknet) == "table" or (getgenv and getgenv().raknet) then
-            local r = raknet or getgenv().raknet
-            
-            if Value then
-                r.add_send_hook(rakhook)
-                hooked = true
-            else
-                r.remove_send_hook(rakhook)
-                hooked = false
-                skipPacket = false -- Reset state
-            end
-        else
+        local r = (typeof(raknet) == "table" and raknet) or (getgenv and getgenv().raknet)
+        
+        if not r then
             Rayfield:Notify({
                 Title = "Error",
                 Content = "You do not have raknet on",
                 Duration = 3,
                 Image = "x",
             })
+            return
+        end
+
+        if Value then
+            r.add_send_hook(rakhook)
+            hooked = true
+        else
+            r.remove_send_hook(rakhook)
+            hooked = false
+            packetCount = 0
         end
     end,
 })
