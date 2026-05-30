@@ -318,39 +318,59 @@ local Desyncsection = Desync:CreateSection("RAKNET DESYNC")
 local Paragraph = Desync:CreateParagraph({Title = "Desync", Content = "If you do not have RakNet on, this will not work"})
 
 local hooked = false
+local desyncIntensity = 3 -- Default intensity
+local packetCounter = 0
 
--- Note: 'raknet' must be globally available in your executor environment for this to function
+-- The logic that modifies the packets
 local function rakhook(packet)
     if packet.PacketId == 0x1B then
-        local buf = packet.AsBuffer
-        buffer.writeu32(buf, 1, 0xFFFFFFFF)
-        packet:SetData(buf)
+        packetCounter = (packetCounter + 1) % desyncIntensity
+        if packetCounter == 0 then
+            local buf = packet.AsBuffer
+            buffer.writeu32(buf, 1, 0xFFFFFFFF)
+            packet:SetData(buf)
+        end
     end
 end
 
-local Toggle = Desync:CreateToggle({
+-- 1. Intensity Slider
+Tab:CreateSlider({
+    Name = "Desync Intensity",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "Level",
+    CurrentValue = 3,
+    Flag = "DesyncSlider",
+    Callback = function(Value)
+        desyncIntensity = Value
+    end,
+})
+
+-- 2. Desync Toggle
+local Toggle = Tab:CreateToggle({
     Name = "Desync",
     CurrentValue = false,
     Flag = "DesyncToggle",
     Callback = function(Value)
-        -- Check if the environment supports raknet before proceeding
-        if typeof(raknet) == "table" or (getgenv and getgenv().raknet) then
-            local r = raknet or getgenv().raknet
-            
-            if Value then
-                r.add_send_hook(rakhook)
-                hooked = true
-            else
-                r.remove_send_hook(rakhook)
-                hooked = false
-            end
-        else
+        -- Ensure raknet exists in the environment
+        local r = (typeof(raknet) == "table" and raknet) or (getgenv and getgenv().raknet)
+        
+        if not r then
             Rayfield:Notify({
                 Title = "Error",
-                Content = "You do not have raknet on",
+                Content = "RakNet not found in this executor environment.",
                 Duration = 3,
                 Image = "x",
             })
+            return
+        end
+
+        if Value then
+            r.add_send_hook(rakhook)
+            hooked = true
+        else
+            r.remove_send_hook(rakhook)
+            hooked = false
         end
     end,
 })
