@@ -377,28 +377,62 @@ local RunService = game:GetService("RunService")
 
 local godModeEnabled = false
 local LocalPlayer = Players.LocalPlayer
+local TARGET_HEALTH = 2343724723646723476237646724672364732
 
 local function godModeLoop()
-    if godModeEnabled then
-        local character = LocalPlayer.Character
-        if character and character:FindFirstChild("Humanoid") then
-            local humanoid = character.Humanoid
-            if humanoid.Health < humanoid.MaxHealth then
-                humanoid.Health = humanoid.MaxHealth
+    if not godModeEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    local humanoid = character:FindFirstChild("Humanoid")
+    if humanoid then
+        -- 1. Force the massive health value
+        if humanoid.MaxHealth ~= TARGET_HEALTH then
+            humanoid.MaxHealth = TARGET_HEALTH
+        end
+        if humanoid.Health ~= TARGET_HEALTH then
+            humanoid.Health = TARGET_HEALTH
+        end
+        
+        -- 2. Prevent death-related destruction
+        humanoid.BreakJointsOnDeath = false
+        
+        -- 3. Clear negative humanoid states (prevents being stunned/tripped)
+        for _, state in pairs(Enum.HumanoidStateType:GetEnumItems()) do
+            if state ~= Enum.HumanoidStateType.None then
+                humanoid:SetStateEnabled(state, true)
             end
+        end
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end
+    
+    -- 4. Prevent specific "kill parts" or void damage
+    -- If the character falls into the void, reset position to keep them alive
+    if character:FindFirstChild("HumanoidRootPart") then
+        if character.HumanoidRootPart.Position.Y < -500 then
+            character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
         end
     end
 end
 
--- Run every frame
-RunService.Stepped:Connect(godModeLoop)
+-- Use Heartbeat for the highest priority update loop
+RunService.Heartbeat:Connect(godModeLoop)
 
 COMBAT:CreateToggle({
-    Name = "God Mode",
+    Name = "God Mode [NEW]",
     CurrentValue = false,
     Flag = "GodMode1",
     Callback = function(Value)
         godModeEnabled = Value
+        if not Value then
+            local character = LocalPlayer.Character
+            if character and character:FindFirstChild("Humanoid") then
+                character.Humanoid.MaxHealth = 100
+                character.Humanoid.Health = 100
+                character.Humanoid.BreakJointsOnDeath = true
+            end
+        end
     end,
 })
 
