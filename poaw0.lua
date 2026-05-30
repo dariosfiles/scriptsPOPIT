@@ -374,63 +374,68 @@ local Cmbtsection = COMBAT:CreateSection("Combat")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-
-local godModeEnabled = false
 local LocalPlayer = Players.LocalPlayer
 local TARGET_HEALTH = 2343724723646723476237646724672364732
+local godModeEnabled = false
 
-local function godModeLoop()
-    if not godModeEnabled then return end
-    
-    local character = LocalPlayer.Character
-    if not character then return end
-    
-    local humanoid = character:FindFirstChild("Humanoid")
-    if humanoid then
-        -- 1. Force the massive health value
-        if humanoid.MaxHealth ~= TARGET_HEALTH then
-            humanoid.MaxHealth = TARGET_HEALTH
-        end
-        if humanoid.Health ~= TARGET_HEALTH then
-            humanoid.Health = TARGET_HEALTH
-        end
-        
-        -- 2. Prevent death-related destruction
-        humanoid.BreakJointsOnDeath = false
-        
-        -- 3. Clear negative humanoid states (prevents being stunned/tripped)
-        for _, state in pairs(Enum.HumanoidStateType:GetEnumItems()) do
-            if state ~= Enum.HumanoidStateType.None then
-                humanoid:SetStateEnabled(state, true)
+-- The functions to modify the environment
+local function setupGodmode()
+    for _, part in pairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if string.find(part.Name:lower(), "kill") or string.find(part.Name:lower(), "lava") or part.Material == Enum.Material.Neon then
+                part.CanTouch = false
+                part.CanCollide = false
+                part.Transparency = 0.5
             end
-        end
-        humanoid:ChangeState(Enum.HumanoidStateType.Running)
-    end
-    
-    -- 4. Prevent specific "kill parts" or void damage
-    -- If the character falls into the void, reset position to keep them alive
-    if character:FindFirstChild("HumanoidRootPart") then
-        if character.HumanoidRootPart.Position.Y < -500 then
-            character.HumanoidRootPart.CFrame = CFrame.new(0, 50, 0)
         end
     end
 end
 
--- Use Heartbeat for the highest priority update loop
-RunService.Heartbeat:Connect(godModeLoop)
+local function revertGodmode()
+    for _, part in pairs(workspace:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if string.find(part.Name:lower(), "kill") or string.find(part.Name:lower(), "lava") or part.Material == Enum.Material.Neon then
+                part.CanTouch = true
+                part.CanCollide = true
+                part.Transparency = 0
+            end
+        end
+    end
+end
 
+-- The Heartbeat loop for constant health enforcement
+RunService.Heartbeat:Connect(function()
+    if not godModeEnabled then return end
+    
+    local character = LocalPlayer.Character
+    if character and character:FindFirstChild("Humanoid") then
+        local humanoid = character.Humanoid
+        
+        -- Force health
+        if humanoid.MaxHealth ~= TARGET_HEALTH then humanoid.MaxHealth = TARGET_HEALTH end
+        if humanoid.Health ~= TARGET_HEALTH then humanoid.Health = TARGET_HEALTH end
+        
+        -- Prevent death
+        humanoid.BreakJointsOnDeath = false
+    end
+end)
+
+-- Your toggle integration
 COMBAT:CreateToggle({
-    Name = "God Mode [NEW]",
+    Name = "God Mode",
     CurrentValue = false,
     Flag = "GodMode1",
     Callback = function(Value)
         godModeEnabled = Value
-        if not Value then
+        if Value then
+            setupGodmode()
+        else
+            revertGodmode()
+            -- Reset health when toggled off
             local character = LocalPlayer.Character
             if character and character:FindFirstChild("Humanoid") then
                 character.Humanoid.MaxHealth = 100
                 character.Humanoid.Health = 100
-                character.Humanoid.BreakJointsOnDeath = true
             end
         end
     end,
