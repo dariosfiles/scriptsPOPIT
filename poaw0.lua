@@ -334,7 +334,7 @@ local function rakhook(packet)
 end
 
 -- 1. Intensity Slider
-Tab:CreateSlider({
+Main:CreateSlider({
     Name = "Desync Intensity",
     Range = {1, 10},
     Increment = 1,
@@ -347,7 +347,7 @@ Tab:CreateSlider({
 })
 
 -- 2. Desync Toggle
-local Toggle = Tab:CreateToggle({
+local Toggle = Main:CreateToggle({
     Name = "Desync",
     CurrentValue = false,
     Flag = "DesyncToggle",
