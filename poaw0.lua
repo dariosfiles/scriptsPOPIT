@@ -563,6 +563,77 @@ HUB:CreateButton({
     end,
 })
 
+local http = game:GetService("HttpService")
+
+-- Function to handle the download
+local function getAssetPath(url, fileName)
+    local path = "EpsteinAssets/" .. fileName
+    if not isfile(path) then
+        if not isfolder("EpsteinAssets") then makefolder("EpsteinAssets") end
+        
+        local response = request({
+            Url = url,
+            Method = "GET"
+        })
+        
+        if response.StatusCode == 200 then
+            writefile(path, response.Body)
+        else
+            warn("Failed to download asset: " .. response.StatusCode)
+            return nil
+        end
+    end
+    return getcustomasset(path)
+end
+
+local Toggle = HUB:CreateToggle({
+    Name = "✅ Epsteinify",
+    CurrentValue = false,
+    Flag = "EpsteinifyToggle",
+    Callback = function(Value)
+        local imageAsset = getAssetPath("https://cdn.abcotvs.com/dip/images/5417908_072519-wabc-jeffrey-epstein-img.jpg?w=1600", "epstein.jpg")
+        
+        if not imageAsset then return end
+        
+        local function applyTexture(obj)
+            if obj:IsA("BasePart") or obj:IsA("MeshPart") then
+                if Value then
+                    for _, face in pairs(Enum.NormalId:GetEnumItems()) do
+                        if not obj:FindFirstChild("EpsteinDecal_" .. face.Name) then
+                            local decal = Instance.new("Decal")
+                            decal.Name = "EpsteinDecal_" .. face.Name
+                            decal.Face = face
+                            decal.Texture = imageAsset
+                            decal.Parent = obj
+                        end
+                    end
+                else
+                    for _, child in pairs(obj:GetChildren()) do
+                        if child.Name:sub(1, 13) == "EpsteinDecal_" then
+                            child:Destroy()
+                        end
+                    end
+                end
+            end
+        end
+
+        for _, obj in pairs(workspace:GetDescendants()) do
+            applyTexture(obj)
+        end
+
+        if Value then
+            if not _G.EpsteinConnection then
+                _G.EpsteinConnection = workspace.DescendantAdded:Connect(applyTexture)
+            end
+        else
+            if _G.EpsteinConnection then
+                _G.EpsteinConnection:Disconnect()
+                _G.EpsteinConnection = nil
+            end
+        end
+    end,
+})
+
 local Bckdoor = Window:CreateTab("Backdoor", "door-closed")
 
 local Bcksection = Bckdoor:CreateSection("ServerSide Executor")
