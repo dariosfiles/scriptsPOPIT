@@ -311,34 +311,25 @@ local Button = Main:CreateButton({
    end,
 })
 
-local Desync = Window:CreateTab("Desync", "wifi")
+local Desync = Window:CreateTab("Fixed Desync", "wifi")
 
 local Desyncsection = Desync:CreateSection("RAKNET DESYNC")
 
 local Paragraph = Desync:CreateParagraph({Title = "Desync", Content = "If you do not have RakNet on, this will not work"})
 
 local hooked = false
-local skipPacket = false -- Toggles between true/false to skip every other packet
 
 -- Note: 'raknet' must be globally available in your executor environment for this to function
 local function rakhook(packet)
     if packet.PacketId == 0x1B then
-        -- Only process the packet if skipPacket is false
-        if skipPacket then
-            skipPacket = false
-            return -- Skip this packet
-        else
-            skipPacket = true
-            -- Process the packet
-            local buf = packet.AsBuffer
-            buffer.writeu32(buf, 1, 0xFFFFFFFF)
-            packet:SetData(buf)
-        end
+        local buf = packet.AsBuffer
+        buffer.writeu32(buf, 1, 0xFFFFFFFF)
+        packet:SetData(buf)
     end
 end
 
-local Toggle = Desync:CreateToggle({
-    Name = "Desync",
+local Toggle = Tab:CreateToggle({
+    Name = "NEW Desync",
     CurrentValue = false,
     Flag = "DesyncToggle",
     Callback = function(Value)
@@ -352,12 +343,11 @@ local Toggle = Desync:CreateToggle({
             else
                 r.remove_send_hook(rakhook)
                 hooked = false
-                skipPacket = false -- Reset state
             end
         else
             Rayfield:Notify({
                 Title = "Error",
-                Content = "You do not have raknet on",
+                Content = "RakNet not found in this executor environment.",
                 Duration = 3,
                 Image = "x",
             })
