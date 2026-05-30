@@ -524,6 +524,45 @@ end
    end,
 })
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local function executeDuckDoomSequence()
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer.Backpack
+    local tool = character:FindFirstChild("DuckDoom") or backpack:FindFirstChild("DuckDoom")
+
+    if tool then
+        -- 1. Equip and Activate
+        tool.Parent = character
+        task.wait() -- Small delay to allow equip replication
+        tool:Activate()
+        
+        -- 2. Fire the target remotes
+        for _, v in pairs(game:GetDescendants()) do
+            if v:IsA("RemoteEvent") then
+                local parentName = v.Parent.Name
+                if parentName == "WeaponsRemotes" or parentName == "VipRemotes" or parentName == "Remotes" then
+                    v:FireServer()
+                end
+            end
+        end
+
+        -- 3. Clear/Destroy the tool
+        tool:Destroy()
+    else
+        warn("DuckDoom not found in inventory or character!")
+    end
+end
+
+-- Add this button to your existing UI
+HUB:CreateButton({
+    Name = "✅ Fatpaps Obby Duck Doom",
+    Callback = function()
+        executeDuckDoomSequence()
+    end,
+})
+
 local Bckdoor = Window:CreateTab("Backdoor", "door-closed")
 
 local Bcksection = Bckdoor:CreateSection("ServerSide Executor")
