@@ -328,7 +328,7 @@ local function rakhook(packet)
     end
 end
 
-local Toggle = Tab:CreateToggle({
+local Toggle = Desync:CreateToggle({
     Name = "NEW Desync",
     CurrentValue = false,
     Flag = "DesyncToggle",
